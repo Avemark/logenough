@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 ctrlc = "3.4.2"
 circular-buffer = "0.1.6"
+crossbeam-channel = "0.5.11"
