@@ -1,29 +1,56 @@
-use circular_buffer::CircularBuffer;
-use crossbeam_channel::bounded;
-use ctrlc;
-use logenough::listener::{UdpListener, CANCEL};
-use std::sync::mpsc::Sender;
-use std::thread;
+use std::sync::Mutex;
 
 fn main() {
-    //    let lines = CircularBuffer::<1024, String>::new();
+    //let buffer = Arc::new([EMPTY_BUFFER_LINE; 1024]);
+}
 
-    let (qtx, qrx) = bounded(1);
+const EMPTY_BUFFER_LINE: Mutex<[u8; 24]> = Mutex::new([0u8; 24]);
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::mpsc::channel;
+    use std::sync::Arc;
 
-    let mut udp_listener = UdpListener::new(lines, senders, 32471);
+    #[test]
+    fn test_mutex_shit() {
+        let buffer = Mutex::new([0u8; 24]);
 
-    let socket = udp_listener
-        .socket
-        .try_clone()
-        .expect("Could not clone UDP socket");
+        {
+            let foo = buffer.lock().unwrap();
+            println!("before: {:?}", foo);
+        }
+        {
+            let mut foo = buffer.lock().unwrap();
+            foo[0] = 2;
+            foo[1] = 3;
+        }
+        {
+            let foo = buffer.lock().unwrap();
+            println!("after: {:?}", foo);
+        }
 
-    ctrlc::set_handler(move || {
-        qtx.send(true);
-        socket.send(&[CANCEL]);
-    })
-    .expect("Error setting Ctrl+C handler");
+        let bufferline = &buffer.lock().unwrap();
+        assert_eq!(2, bufferline[0]);
+        assert_eq!(3, bufferline[1]);
+    }
 
-    let listener_thread = thread::spawn(move || {
-        udp_listener.listen();
-    });
+    #[test]
+    fn test_arc_shit() {
+        let mut simple = Arc::new(13);
+
+        let foo = Arc::get_mut(&mut simple).unwrap();
+
+        *foo = 8;
+
+        assert_eq!(8, *simple);
+
+        let mut mutex = Arc::new(Mutex::new([1, 2, 3]));
+
+        let cloned = Arc::clone(&mutex);
+        {
+            cloned.lock().unwrap()[1] = 5;
+        }
+
+        assert_eq!(5, mutex.lock().unwrap()[1]);
+    }
 }
