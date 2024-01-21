@@ -8,8 +8,10 @@ const EMPTY_BUFFER_LINE: Mutex<[u8; 24]> = Mutex::new([0u8; 24]);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::net::UdpSocket;
     use std::sync::mpsc::channel;
-    use std::sync::Arc;
+    use std::sync::{Arc, Condvar};
+    use std::thread;
 
     #[test]
     fn test_mutex_shit() {
@@ -36,21 +38,27 @@ mod tests {
 
     #[test]
     fn test_arc_shit() {
-        let mut simple = Arc::new(13);
-
-        let foo = Arc::get_mut(&mut simple).unwrap();
-
-        *foo = 8;
-
-        assert_eq!(8, *simple);
-
-        let mut mutex = Arc::new(Mutex::new([1, 2, 3]));
+        let mutex = Arc::new(Mutex::new([0u8; 32]));
 
         let cloned = Arc::clone(&mutex);
-        {
-            cloned.lock().unwrap()[1] = 5;
-        }
 
-        assert_eq!(5, mutex.lock().unwrap()[1]);
+        let udp = UdpSocket::bind("127.0.0.1:32471").unwrap();
+
+        let keep = udp.try_clone().unwrap();
+
+        let listener = thread::spawn(move || {
+            udp.recv_from(&mut *mutex.lock().unwrap()).unwrap();
+        });
+
+        keep.send_to(&[4, 7, 1, 1], "127.0.0.1:32471").unwrap();
+
+        listener.join().unwrap();
+
+        assert_eq!(7, cloned.lock().unwrap()[1]);
+    }
+
+    #[test]
+    fn test_condvar_stuff() {
+        let condvar = Condvar::new();
     }
 }
