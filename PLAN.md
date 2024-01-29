@@ -1,4 +1,4 @@
-Apparently we would have to make our own multithreaded ring buffer.
+ Apparently we would have to make our own multithreaded ring buffer.
 
 shit.
 

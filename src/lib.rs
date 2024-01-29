@@ -20,19 +20,28 @@ pub fn listen<const N: usize, const M: usize>(
 }
 
 pub struct Reference<const N: usize> {
-    cond: Condvar,
-    reference: AtomicUsize,
+    pub cond: Condvar,
+    pub reference: Mutex<usize>,
 }
 
 impl<const N: usize> Reference<N> {
-    fn increment(&self) -> usize {
-        self.reference.fetch_add(1, AcqRel);
-        self.reference
-            .compare_exchange(N, 0usize, AcqRel, Relaxed)
-            .unwrap_or_else(|num| num)
+    pub fn increment(&self) -> usize {
+        let mut reference = self.reference.lock().unwrap();
+        *reference = reference.wrapping_add(1);
+        if *reference >= N {
+            *reference = 0usize;
+        }
+        *reference
     }
 
-    fn notify(&self) {
+    pub fn notify(&self) {
         self.cond.notify_all();
+    }
+
+    pub fn new(num: usize) -> Self {
+        Self {
+            cond: Condvar::new(),
+            reference: Mutex::new(num),
+        }
     }
 }

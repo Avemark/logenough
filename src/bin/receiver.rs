@@ -8,10 +8,14 @@ const EMPTY_BUFFER_LINE: Mutex<[u8; 24]> = Mutex::new([0u8; 24]);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use logenough::Reference;
     use std::net::UdpSocket;
-    use std::sync::mpsc::channel;
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering::{Relaxed, SeqCst};
+    use std::sync::mpsc::{channel, Sender};
     use std::sync::{Arc, Condvar};
     use std::thread;
+    use std::thread::JoinHandle;
 
     #[test]
     fn test_mutex_shit() {
@@ -57,8 +61,53 @@ mod tests {
         assert_eq!(7, cloned.lock().unwrap()[1]);
     }
 
+    struct CondRef {
+        condvar: Condvar,
+        reference: Mutex<usize>,
+    }
+
+    fn listen(
+        cond_ref: Arc<CondRef>,
+        initial_ref: usize,
+        startup: Sender<()>,
+    ) -> JoinHandle<usize> {
+        thread::spawn(move || {
+            startup.send(()).unwrap();
+            let mut current_ref = cond_ref.reference.lock().unwrap();
+            while *current_ref == initial_ref {
+                current_ref = cond_ref.condvar.wait(current_ref).unwrap();
+            }
+
+            *current_ref
+        })
+    }
+
     #[test]
     fn test_condvar_stuff() {
-        let condvar = Condvar::new();
+        let initial = 0usize;
+
+        let cond_ref = Arc::new(CondRef {
+            condvar: Condvar::new(),
+            reference: Mutex::new(0usize),
+        });
+        let cond_ref_clone = Arc::clone(&cond_ref);
+
+        let (startup_t, startup_r) = channel::<()>();
+
+        let listener = listen(cond_ref_clone, initial, startup_t);
+
+        startup_r.recv().unwrap();
+        cond_ref.condvar.notify_one();
+
+        {
+            let mut reference = cond_ref.reference.lock().unwrap();
+            *reference = 19usize;
+        }
+
+        cond_ref.condvar.notify_one();
+
+        let read = listener.join().unwrap();
+
+        assert_eq!(19usize, read);
     }
 }
