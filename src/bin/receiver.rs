@@ -8,10 +8,7 @@ const EMPTY_BUFFER_LINE: Mutex<[u8; 24]> = Mutex::new([0u8; 24]);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use logenough::Reference;
     use std::net::UdpSocket;
-    use std::sync::atomic::AtomicUsize;
-    use std::sync::atomic::Ordering::{Relaxed, SeqCst};
     use std::sync::mpsc::{channel, Sender};
     use std::sync::{Arc, Condvar};
     use std::thread;
