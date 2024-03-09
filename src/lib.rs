@@ -1,9 +1,12 @@
+#![allow(dead_code)]
 use std::net::UdpSocket;
-use std::sync::atomic::Ordering::{AcqRel, Relaxed, SeqCst};
+use std::sync::atomic::Ordering::{AcqRel, Relaxed};
 use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::sync::{Arc, Condvar, Mutex};
-
 pub mod listener;
+
+mod logdata;
+mod logline;
 
 pub fn listen<const N: usize, const M: usize>(
     data: Arc<[Mutex<[u8; M]>; N]>,
