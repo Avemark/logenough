@@ -35,3 +35,9 @@ impl LockedLogline {
         }
     }
 }
+
+impl Default for LockedLogline {
+    fn default() -> Self {
+        Self::new()
+    }
+}

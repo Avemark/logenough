@@ -1,12 +1,11 @@
-use std::array;
-
 use crate::logline::LockedLogline;
 use parking_lot::{Condvar, Mutex};
+use std::array;
 
-struct LogData<const N: usize> {
-    data: [LockedLogline; N],
-    reference: Mutex<usize>,
-    cond: Condvar,
+pub struct LogData<const N: usize> {
+    pub data: [LockedLogline; N],
+    pub reference: Mutex<usize>,
+    pub cond: Condvar,
 }
 
 impl<const N: usize> LogData<N> {
