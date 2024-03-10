@@ -14,11 +14,11 @@ impl<const N: usize> Receiver<N> {
     where
         F: Fn(&Logline),
     {
-        while !interrupted.load(Ordering::Relaxed) {
+        loop {
             let reference: usize = *self.reference_lock();
             while self.position != reference {
                 if interrupted.load(Ordering::Relaxed) {
-                    break;
+                    return;
                 }
                 f(&self.next_log_line());
             }
