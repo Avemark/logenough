@@ -15,18 +15,12 @@ impl<const N: usize> Receiver<N> {
         F: Fn(&Logline),
     {
         while !interrupted.load(Ordering::Relaxed) {
-            //{
-            //    let mut reference = self.reference_lock();
-            //    if self.position == *reference {
-            //        self.data.cond.wait(&mut reference);
-            //    }
-            // }
-            let reference = *self.reference_lock();
-            while self.position < reference {
+            let reference: usize = *self.reference_lock();
+            while self.position != reference {
                 if interrupted.load(Ordering::Relaxed) {
                     break;
                 }
-                f(&self.data.data[self.increment()].lock());
+                f(&self.next_log_line());
             }
             self.data.cond.wait(&mut self.reference_lock())
         }
@@ -34,6 +28,10 @@ impl<const N: usize> Receiver<N> {
 
     fn reference_lock(&self) -> MutexGuard<usize> {
         self.data.reference.lock()
+    }
+
+    fn next_log_line(&mut self) -> MutexGuard<'_, Logline> {
+        self.data.data[self.increment()].lock()
     }
 
     fn increment(&mut self) -> usize {
