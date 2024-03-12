@@ -36,12 +36,18 @@ impl<const N: usize> LogData<N> {
         *position
     }
 
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             data: array::from_fn(|_| LockedLogline::new()),
             reference: Mutex::new(0usize),
             cond: Condvar::new(),
         }
+    }
+}
+
+impl<const N: usize> Default for LogData<N> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
