@@ -10,11 +10,7 @@ pub struct Receiver<const N: usize> {
     data: Arc<LogData<N>>,
 }
 
-#[cfg(test)]
 const ORDERING: Ordering = Ordering::SeqCst;
-
-#[cfg(not(test))]
-const ORDERING: Ordering = Ordering::Relaxed;
 
 impl<const N: usize> Receiver<N> {
     pub fn receive<F>(mut self, interrupted: &AtomicBool, f: F)
@@ -22,24 +18,30 @@ impl<const N: usize> Receiver<N> {
         F: Fn(&Logline),
     {
         loop {
-            let reference: usize = *self.reference_lock();
-            while self.position != reference {
-                if interrupted.load(ORDERING) {
-                    return;
+            let upcoming_read = {
+                let mut reflock = self.reference_lock();
+                if self.position == *reflock {
+                    println!("waiting for condvar");
+                    self.data.cond.wait(&mut reflock);
                 }
-                f(&self.next_log_line());
+                *reflock
+            };
+            println!(
+                "Receiver working, position {}, trying to catch up to the upcoming read at {}",
+                self.position, upcoming_read
+            );
+            while self.position != upcoming_read {
+                f(&self.data.data[self.position].lock());
+                self.increment();
             }
-            self.data.cond.wait(&mut self.reference_lock())
+            if interrupted.load(ORDERING) {
+                return;
+            }
         }
     }
 
     fn reference_lock(&self) -> MutexGuard<usize> {
         self.data.reference.lock()
-    }
-
-    fn next_log_line(&mut self) -> MutexGuard<'_, Logline> {
-        let ref_i = self.increment();
-        self.data.data[ref_i].lock()
     }
 
     fn increment(&mut self) -> usize {
@@ -51,9 +53,8 @@ impl<const N: usize> Receiver<N> {
     }
 
     pub fn new(logdata: &Arc<LogData<N>>) -> Self {
-        let position = *logdata.reference.lock();
         Self {
-            position,
+            position: 0usize,
             data: Arc::clone(logdata),
         }
     }
@@ -68,31 +69,26 @@ mod test {
     #[test]
     fn test_receive() {
         let logdata = Arc::new(LogData::<5>::new());
-
         let receiver = Receiver::new(&logdata);
 
-        logdata
-            .receive(|buffer: &mut [u8]| {
-                for (index, byte) in "Hello".as_bytes().iter().enumerate() {
-                    buffer[index] = *byte;
-                }
-                if false {
-                    Err(1)
-                } else {
-                    Ok("Hello".len())
-                }
-            })
-            .unwrap();
+        let func: fn(&mut [u8]) -> Result<usize, ()> = |buffer: &mut [u8]| {
+            for (index, byte) in "Hello".as_bytes().iter().enumerate() {
+                buffer[index] = *byte;
+            }
+            Ok("Hello".len())
+        };
+
+        logdata.receive(func).unwrap();
+        logdata.receive(func).unwrap();
 
         assert_eq!(
             format!("{}", "Hello"),
-            format!("{}", logdata.data[1].lock())
+            format!("{}", logdata.data[0].lock())
         );
 
-        let interrupted = AtomicBool::new(false);
+        let interrupted = AtomicBool::new(true);
+
         receiver.receive(&interrupted, |logline| {
-            interrupted.store(true, std::sync::atomic::Ordering::SeqCst);
-            logdata.cond.notify_one();
             assert_eq!(format!("{}", "Hello"), format!("{}", logline));
         })
     }

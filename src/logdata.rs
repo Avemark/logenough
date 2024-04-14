@@ -13,11 +13,19 @@ impl<const N: usize> LogData<N> {
     where
         F: Fn(&mut [u8]) -> Result<usize, E>,
     {
-        let mut logline = self.data[self.increment()].lock();
+        self.increment();
+        self.cond.notify_all();
+
+        let reference = *self.reference.lock();
+        println!("DATA: Taking a lock on data[{}]", reference);
+        let mut logline = self.data[reference].lock();
+
         match f(&mut logline.buffer) {
             Ok(bytes_read) => {
+                // println!("DATA: did read ref {} Ok", reference);
                 logline.bytes_read = bytes_read;
-                self.cond.notify_all();
+                // println!("DATA: Notified");
+                println!("DATA: releasing lock on data[{}]", reference);
                 Ok(())
             }
             Err(error) => {
@@ -33,13 +41,14 @@ impl<const N: usize> LogData<N> {
         if *position >= N {
             *position = 0;
         }
+        // println!("DATA: incremented to {}", position);
         *position
     }
 
     pub fn new() -> Self {
         Self {
             data: array::from_fn(|_| LockedLogline::new()),
-            reference: Mutex::new(0usize),
+            reference: Mutex::new(N),
             cond: Condvar::new(),
         }
     }

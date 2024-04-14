@@ -2,20 +2,20 @@ Apparently we would have to make our own multithreaded ring buffer.
 
 shit.
 
-multiqueue is dead
-mpmc is useles because it's not broadcast
+multi queue is dead
+mpmc is useless because it's not broadcast
 
 Buffer and sequencer must be publicly readable.
 
-ringbuffer is neat but does things for us that we do not want.
+ring buffer is neat but does things for us that we do not want.
 
 Sequencer: can probably be integer n < Buffer.len 
     Atomic BS?
 
-can Condvar be used by UDPlistener to ping when data updates?
+can Condvar be used by UDPListener to ping when data updates?
     in effect: Can a thread be busy for three pings and then wait for the 4th?
 
-multithread utopia:
+multithreading utopia:
 
 UdpSocket listener writes to log, pings sequencer system somehow
 
