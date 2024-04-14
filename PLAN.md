@@ -1,8 +1,21 @@
- Apparently we would have to make our own multithreaded ring buffer.
+ Apparently we have to make our own multithreaded ring buffer.
 
 shit.
 
-multiqueue is dead
+
+TODO:
+- [x] Data storage
+- [x] Data updated flag
+- [x] UDP listener
+- [ ] At least one of:  
+  - [ ] Debug Streamer
+  - [ ] TCP Streamer
+- [ ] TCP Listener
+- [ ] TCP Client app
+
+---
+
+multiqueue is dead  
 mpmc is useles because it's not broadcast
 
 Buffer and sequencer must be publicly readable.
@@ -50,7 +63,7 @@ the crazy(?) idea:
 can send:
 &'a [u8]
 tcpStream
-
+Arc
 can not send:
 [u8]
 Sender

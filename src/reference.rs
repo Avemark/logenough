@@ -1,10 +1,11 @@
 use std::sync::{Condvar, Mutex};
 
+#[derive(Debug)]
 pub struct Reference<const N: usize> {
     pub cond: Condvar,
     pub reference: Mutex<usize>,
 }
-
+#[allow(dead_code)]
 impl<const N: usize> Reference<N> {
     pub fn increment(&self) -> usize {
         let mut reference = self.reference.lock().unwrap();

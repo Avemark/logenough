@@ -1,15 +1,12 @@
-use std::sync::Mutex;
-
 fn main() {
     //let buffer = Arc::new([EMPTY_BUFFER_LINE; 1024]);
 }
 
-const EMPTY_BUFFER_LINE: Mutex<[u8; 24]> = Mutex::new([0u8; 24]);
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::net::UdpSocket;
     use std::sync::mpsc::{channel, Sender};
+    use std::sync::Mutex;
     use std::sync::{Arc, Condvar};
     use std::thread;
     use std::thread::JoinHandle;
