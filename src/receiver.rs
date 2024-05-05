@@ -61,7 +61,7 @@ impl<const N: usize> Receiver<N> {
 }
 
 #[cfg(test)]
-mod test {
+mod receiver_test {
     use super::Receiver;
     use crate::logdata::LogData;
     use std::sync::{atomic::AtomicBool, Arc};

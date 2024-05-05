@@ -17,7 +17,7 @@ impl<const N: usize> LogData<N> {
         self.cond.notify_all();
 
         let reference = *self.reference.lock();
-        println!("DATA: Taking a lock on data[{}]", reference);
+        // println!("DATA: Taking a lock on data[{}]", reference);
         let mut logline = self.data[reference].lock();
 
         match f(&mut logline.buffer) {
@@ -61,7 +61,7 @@ impl<const N: usize> Default for LogData<N> {
 }
 
 #[cfg(test)]
-mod tests {
+mod logdata_test {
     use super::LogData;
 
     struct TErr {}
@@ -69,12 +69,12 @@ mod tests {
     #[test]
     fn test_increment_and_wrap() {
         let logdata = LogData::<2>::new();
+        assert_eq!(2usize, *logdata.reference.lock());
+
+        assert_eq!(0usize, logdata.increment());
         assert_eq!(0usize, *logdata.reference.lock());
 
         assert_eq!(1usize, logdata.increment());
-        assert_eq!(1usize, *logdata.reference.lock());
-
-        assert_eq!(0usize, logdata.increment());
     }
 
     #[test]
@@ -86,7 +86,7 @@ mod tests {
         let result = logdata.receive(receive);
 
         assert!(result.is_ok());
-        assert_eq!(1usize, logdata.data[1].lock().bytes_read);
+        assert_eq!(1usize, logdata.data[0].lock().bytes_read);
     }
 
     #[test]
@@ -104,7 +104,7 @@ mod tests {
         let result = logdata.receive(receive);
 
         assert!(result.is_ok());
-        assert_eq!(5usize, logdata.data[1].lock().bytes_read);
-        assert_eq!(format!("Hello"), format!("{}", logdata.data[1].lock()));
+        assert_eq!(5usize, logdata.data[0].lock().bytes_read);
+        assert_eq!(format!("Hello"), format!("{}", logdata.data[0].lock()));
     }
 }
