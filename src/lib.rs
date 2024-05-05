@@ -6,7 +6,7 @@ pub mod receiver;
 pub mod udp;
 
 #[cfg(test)]
-mod test {
+mod lib_test {
     use crate::logdata::LogData;
     use crate::receiver::Receiver;
     use crate::udp;
@@ -21,11 +21,10 @@ mod test {
         let interrupted = AtomicBool::new(false);
 
         let listener_socket = socket.try_clone().unwrap();
-        let listener_data = Arc::clone(&data);
 
         thread::scope(|scope| {
             scope.spawn(|| {
-                udp::listen(listener_data, &interrupted, listener_socket);
+                udp::listen(&data, &interrupted, listener_socket);
                 println!("Exiting udp listen thread");
             });
 

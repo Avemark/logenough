@@ -1,5 +1,6 @@
 use parking_lot::{Mutex, MutexGuard};
 
+#[derive(Clone, Copy)]
 pub struct Logline {
     pub bytes_read: usize,
     pub buffer: [u8; 508],

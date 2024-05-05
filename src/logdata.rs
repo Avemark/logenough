@@ -17,14 +17,14 @@ impl<const N: usize> LogData<N> {
         self.cond.notify_all();
 
         let reference = *self.reference.lock();
-        // println!("DATA: Taking a lock on data[{}]", reference);
+        #[cfg(debug_assertions)]
+        println!("DATA: Taking a lock on data[{}]", reference);
         let mut logline = self.data[reference].lock();
 
         match f(&mut logline.buffer) {
             Ok(bytes_read) => {
-                // println!("DATA: did read ref {} Ok", reference);
                 logline.bytes_read = bytes_read;
-                // println!("DATA: Notified");
+                #[cfg(debug_assertions)]
                 println!("DATA: releasing lock on data[{}]", reference);
                 Ok(())
             }
@@ -41,14 +41,15 @@ impl<const N: usize> LogData<N> {
         if *position >= N {
             *position = 0;
         }
-        // println!("DATA: incremented to {}", position);
+        #[cfg(debug_assertions)]
+        println!("DATA: incremented to {}", position);
         *position
     }
 
     pub fn new() -> Self {
         Self {
             data: array::from_fn(|_| LockedLogline::new()),
-            reference: Mutex::new(N),
+            reference: Mutex::new(N - 1),
             cond: Condvar::new(),
         }
     }
@@ -61,7 +62,7 @@ impl<const N: usize> Default for LogData<N> {
 }
 
 #[cfg(test)]
-mod logdata_test {
+mod test {
     use super::LogData;
 
     struct TErr {}
@@ -69,7 +70,7 @@ mod logdata_test {
     #[test]
     fn test_increment_and_wrap() {
         let logdata = LogData::<2>::new();
-        assert_eq!(2usize, *logdata.reference.lock());
+        assert_eq!(1usize, *logdata.reference.lock());
 
         assert_eq!(0usize, logdata.increment());
         assert_eq!(0usize, *logdata.reference.lock());

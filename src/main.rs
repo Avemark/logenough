@@ -3,34 +3,29 @@ use logenough::logdata::LogData;
 use logenough::logline::LockedLogline;
 use logenough::receiver::Receiver;
 use logenough::udp;
+use parking_lot::Mutex;
 use std::mem::size_of;
 use std::net::UdpSocket;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 
-const LOG_LINE_COUNT: usize = 2000;
+const LOG_LINE_COUNT: usize = 100000;
 
 fn main() {
-    println!("per line: {}", size_of::<LockedLogline>());
-    println!(
-        "expected total: {}",
-        size_of::<LockedLogline>() * LOG_LINE_COUNT
-    );
-    println!(
-        "size of the whole thing? {}",
-        size_of::<LogData<LOG_LINE_COUNT>>()
-    );
-    let child = thread::Builder::new()
+    let mem_size_buffer = 30_000;
+    let data_size = size_of::<Mutex<LogData<LOG_LINE_COUNT>>>();
+    let from_fn_multiplier = if cfg!(debug_assertions) { 10 } else { 2 };
+
+    thread::Builder::new()
         .name("child thread".into())
-        .stack_size(10000000)
+        .stack_size(data_size * from_fn_multiplier + mem_size_buffer)
         .spawn(|| {
             let data = Arc::new(LogData::<LOG_LINE_COUNT>::new());
             let socket = UdpSocket::bind("127.0.0.1:4711").unwrap();
             let interrupted = Arc::new(AtomicBool::new(false));
 
             let listener_socket = socket.try_clone().unwrap();
-            let listener_data = Arc::clone(&data);
 
             let interrupt = interrupted.clone();
             let handler_socket = socket.try_clone().expect("Failed to clone");
@@ -48,15 +43,18 @@ fn main() {
 
             thread::scope(|scope| {
                 scope.spawn(|| {
-                    udp::listen(listener_data, &interrupted, listener_socket);
+                    println!("Started udp listener");
+                    udp::listen(&data, &interrupted, listener_socket);
                 });
 
                 scope.spawn(|| {
                     Receiver::new(&data).receive(&interrupted, |logline| {
-                        println!("f() received something: '{}'", logline);
+                        println!("f1 received something: '{}'", logline);
                     });
                 });
             })
-        });
-    child.unwrap().join().unwrap();
+        })
+        .expect("Failed to spawn child thread.")
+        .join()
+        .unwrap();
 }
