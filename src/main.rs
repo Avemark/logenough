@@ -8,8 +8,6 @@ use std::net::UdpSocket;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
-use std::thread::sleep;
-use std::time::Duration;
 
 const LOG_LINE_COUNT: usize = 2000;
 
