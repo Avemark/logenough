@@ -19,6 +19,7 @@ impl<'a, const N: usize> Receiver<'a, N> {
     {
         #[cfg(debug_assertions)]
         println!("Receiver waiting for initial notice");
+        #[cfg(not(test))]
         self.data.cond.wait(&mut self.reference_lock());
         #[cfg(debug_assertions)]
         println!("Received initial notice");
