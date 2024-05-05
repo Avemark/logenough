@@ -1,6 +1,5 @@
 use ctrlc;
 use logenough::logdata::LogData;
-use logenough::logline::LockedLogline;
 use logenough::receiver::Receiver;
 use logenough::udp;
 use parking_lot::Mutex;
