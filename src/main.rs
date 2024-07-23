@@ -1,4 +1,6 @@
 use ctrlc;
+use eframe::egui::Context;
+use eframe::{egui, Frame};
 use logenough::logdata::LogData;
 use logenough::receiver::Receiver;
 use logenough::udp;

@@ -11,3 +11,6 @@ edition = "2021"
 ctrlc = "3.4.2"
 circular-buffer = "0.1.6"
 parking_lot = "0.12.1"
+eframe = "0.28.1"
+egui_extras = { version = "*", features = ["all_loaders"] }
+image = { version = "0.25", features = ["png"] }
