@@ -10,7 +10,7 @@ pub struct Receiver<'a, const N: usize> {
     data: &'a Arc<LogData<N>>,
 }
 
-const ORDERING: Ordering = Ordering::SeqCst;
+const ORDERING: Ordering = Ordering::Acquire;
 
 impl<'a, const N: usize> Receiver<'a, N> {
     pub fn receive<F>(mut self, interrupted: &AtomicBool, f: F)

@@ -12,6 +12,12 @@ impl std::fmt::Display for Logline {
     }
 }
 
+impl Logline {
+    pub fn slice(&self) -> &[u8] {
+        &self.buffer[..self.bytes_read]
+    }
+}
+
 pub struct LockedLogline {
     line: Mutex<Logline>,
 }

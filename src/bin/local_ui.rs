@@ -1,10 +1,9 @@
 use eframe::egui::Context;
 use eframe::{egui, Frame};
 use logenough::logdata::LogData;
-use logenough::udp;
-use parking_lot::Mutex;
+use logenough::{set_ctrl_c_handler, udp};
 use std::net::UdpSocket;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
 use std::thread;
@@ -17,7 +16,7 @@ fn main() {
         ..Default::default()
     };
 
-    let logdata = build_ary();
+    let logdata = LogData::<LOG_LINE_COUNT>::build_logdata_in_sub_thread();
     let (tx, rx): (Sender<String>, Receiver<String>) = channel();
 
     let socket = UdpSocket::bind("127.0.0.1:4711").unwrap();
@@ -28,17 +27,8 @@ fn main() {
     let interrupt = interrupted.clone();
     let handler_socket = socket.try_clone().expect("Failed to clone");
     let handler_data = Arc::clone(&logdata);
-    ctrlc::set_handler(move || {
-        println!("interrupting");
-        interrupt.store(true, Ordering::SeqCst);
-        handler_socket
-            .send_to("bye".as_bytes(), "127.0.0.1:4711")
-            .expect("Failed to send bye on udp socket");
 
-        handler_data.cond.notify_all();
-    })
-    .expect("Could not set CTRL-C handler");
-
+    set_ctrl_c_handler(interrupt, handler_socket, handler_data);
     thread::scope(|scope| {
         scope.spawn(|| {
             println!("Started udp listener");
@@ -47,13 +37,14 @@ fn main() {
 
         scope.spawn(|| {
             logenough::receiver::Receiver::new(&logdata).receive(&interrupted, |logline| {
-                tx.send(format!("{}", logline));
+                tx.send(format!("{}", logline))
+                    .expect("Failed to send logline on channel");
             });
         });
         eframe::run_native(
             "Logs",
             eframe_options,
-            Box::new(|cc| Ok(Box::<Logwindow>::new(Logwindow::new(rx)))),
+            Box::new(|_cc| Ok(Box::<Logwindow>::new(Logwindow::new(rx)))),
         )
         .expect("Eframe not happy");
     });
@@ -89,18 +80,4 @@ impl eframe::App for Logwindow {
             }
         });
     }
-}
-
-fn build_ary() -> Arc<LogData<LOG_LINE_COUNT>> {
-    let mem_size_buffer = 30_000;
-    let data_size = size_of::<Mutex<LogData<LOG_LINE_COUNT>>>();
-    let from_fn_multiplier = if cfg!(debug_assertions) { 10 } else { 2 };
-
-    thread::Builder::new()
-        .name("child thread".into())
-        .stack_size(data_size * from_fn_multiplier + mem_size_buffer)
-        .spawn(|| Arc::new(LogData::<LOG_LINE_COUNT>::new()))
-        .unwrap()
-        .join()
-        .unwrap()
 }

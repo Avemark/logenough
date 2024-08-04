@@ -1,13 +1,10 @@
-use ctrlc;
-use eframe::egui::Context;
-use eframe::{egui, Frame};
 use logenough::logdata::LogData;
 use logenough::receiver::Receiver;
-use logenough::udp;
+use logenough::{set_ctrl_c_handler, udp};
 use parking_lot::Mutex;
 use std::mem::size_of;
 use std::net::UdpSocket;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::thread;
 
@@ -31,16 +28,7 @@ fn main() {
             let interrupt = interrupted.clone();
             let handler_socket = socket.try_clone().expect("Failed to clone");
             let handler_data = Arc::clone(&data);
-            ctrlc::set_handler(move || {
-                println!("interrupting");
-                interrupt.store(true, Ordering::SeqCst);
-                handler_socket
-                    .send_to("bye".as_bytes(), "127.0.0.1:4711")
-                    .expect("Failed to send bye on udp socket");
-
-                handler_data.cond.notify_all();
-            })
-            .expect("Could not set CTRL-C handler");
+            set_ctrl_c_handler(interrupt, handler_socket, handler_data);
 
             thread::scope(|scope| {
                 scope.spawn(|| {

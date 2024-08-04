@@ -1,6 +1,7 @@
 use crate::logline::LockedLogline;
 use parking_lot::{Condvar, Mutex};
-use std::array;
+use std::sync::Arc;
+use std::{array, thread};
 
 pub struct LogData<const N: usize> {
     pub data: [LockedLogline; N],
@@ -52,6 +53,20 @@ impl<const N: usize> LogData<N> {
             reference: Mutex::new(N - 1),
             cond: Condvar::new(),
         }
+    }
+
+    pub fn build_logdata_in_sub_thread() -> Arc<LogData<N>> {
+        let mem_size_buffer = 30_000;
+        let data_size = size_of::<Mutex<LogData<N>>>();
+        let from_fn_multiplier = if cfg!(debug_assertions) { 10 } else { 2 };
+
+        thread::Builder::new()
+            .name("child thread".into())
+            .stack_size(data_size * from_fn_multiplier + mem_size_buffer)
+            .spawn(|| Arc::new(LogData::<N>::new()))
+            .unwrap()
+            .join()
+            .unwrap()
     }
 }
 
